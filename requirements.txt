@@ -6,3 +6,4 @@ pypdf2
 pylanguagetool
 nltk
 pyspellchecker
+re
