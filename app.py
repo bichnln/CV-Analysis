@@ -16,6 +16,11 @@ from pdfminer.pdfdevice import PDFDevice
 import PyPDF2
 import string
 
+import matplotlib.pyplot as plt, mpld3
+import io
+from matplotlib.figure import Figure
+import base64
+
 #Grammar & Spelling Lib
 import pylanguagetool
 import nltk
@@ -27,7 +32,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from nltk.tokenize import PunktSentenceTokenizer
 nltk.download('averaged_perceptron_tagger')
-nltk.downlload('punkt')
+nltk.download('punkt')
 
 app = Flask(__name__)
 
@@ -61,13 +66,47 @@ def process():
     tagged_sent =textCloneTag
     tagged_sent_str = ' '.join([word + '/' + pos for word, pos in tagged_sent])
 
-    count = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("PRP"), tagged_sent_str))
+    countFirstPerson = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("PRP"), tagged_sent_str))
 
-    processed="Your CV has " + str(count) + " instances of first-person usage. Please fix!"
-            
-    
-    return render_template("result.html", text=text, word_count = word_count, processed = processed)
+    countNoun = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("NN"), tagged_sent_str))
+    countActionVerb = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("VB"), tagged_sent_str))
+
+    if countFirstPerson != 0:
         
+        processed="Your CV has " + str(countFirstPerson) + " instances of first-person usage. Please fix!"
+
+    nounverb = "There were " + str(countNoun) + " nouns in your CV. "+ str(countActionVerb) + " action verbs."
+
+
+
+    #piechart
+    plt.figure(figsize=(5,5))
+    fig = Figure(figsize =(4,4))
+
+    labels = ["Nouns","Action Verbs"]
+    values = [countNoun, countActionVerb]
+    
+
+    plt.pie(values,labels=labels, autopct="%.1f%%")
+    #plt.show()
+    #mpld3.show()
+    fig = plt.figure()
+    figureImage = mpld3.fig_to_html(fig)
+    img = io.BytesIO()
+    fig.savefig(img, format='png', bbox_inches='tight')
+    img.seek(0)
+    base = base64.b64encode(img.getvalue())
+    plt.close(fig)
+
+                 
+                
+    
+    
+    return render_template("result.html", text=text, word_count = word_count, processed = processed, nounverb = nounverb,my_html =base)
+
+
+    
+    
 
 def extract_text_from_pdf(file):
     resource_manager = PDFResourceManager()
